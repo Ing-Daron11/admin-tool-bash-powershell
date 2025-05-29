@@ -2,8 +2,8 @@ function Show-Menu {
     Write-Host "
   ____        _           ____           _                 _       _           _         __  __                  
  |  _ \  __ _| |_ __ _   / ___|___ _ __ | |_ ___ _ __     / \   __| |_ __ ___ (_)_ __   |  \/  | ___ _ __  _   _ 
- | | | |/ _` | __/ _` | | |     / _ \ '_ \| __/ _ \ '__|   / _ \ /  _` | '_ ` _ \ | | '_ \  | |\/| |/ _ \ '_ \| | | |
- | |_| | (_| | || (_| | | |__|  __/ | | | ||  __/ |     / ___ \ (_| | | | | | | | | | | | |  | |  __/ | | | |_| |
+ | | | |/ _` | __/ _` | | |     / _ \ '_ \| __/ _ \ '__|   / _ \ / _` | '_ ` _ \| | '_ \  | |\/| |/ _ \ '_ \| | | |
+ | |_| | (_| | || (_| | | |__|  __/ | | | ||  __/ |     / ___ \ (_| | | | | | | | | | | |  | |  | |  __/ | | | |_| |
  |____/ \__,_|\__\__,_|  \____\___|_| |_|\__\___|_|    /_/   \_\__,_|_| |_| |_|_|_| |_| |_|  |_|\___|_| |_|\__,_|
     " -ForegroundColor cyan
 
@@ -11,15 +11,19 @@ function Show-Menu {
     Write-Host "2. Mostrar los discos conectados y su espacio disponible" -ForegroundColor Yellow
     Write-Host "3. Mostrar el archivo mas grande de un directorio especificado" -ForegroundColor Yellow
     Write-Host "4. Mostrar memoria libre y uso de swap" -ForegroundColor Yellow
-    Write-Host "5. Mostrar numero de conexiones de red activas (ESTABLISHED)" -ForegroundColo Yellow
+    Write-Host "5. Mostrar numero de conexiones de red activas (ESTABLISHED)" -ForegroundColor Yellow
     Write-Host "0. Salir" -ForegroundColor Green
     Write-Host "cls -> Limpiar la pantalla" -ForegroundColor Green
-
 }
 
 do {
     Show-Menu
     $opcion = Read-Host "Seleccione una opcion"
+
+    if ([string]::IsNullOrWhiteSpace($opcion)) {
+        Write-Host "No ingresaste ninguna opcion. Intenta de nuevo."
+        continue
+    }
 
     switch ($opcion) {
         "1" {
@@ -32,10 +36,16 @@ do {
         }
         "3" {
             $ruta = Read-Host "`nIngrese el path completo del directorio"
+
+            if ([string]::IsNullOrWhiteSpace($ruta)) {
+                Write-Host "No ingresaste una ruta. Intenta de nuevo."
+                continue
+            }
+
             if (Test-Path $ruta) {
                 $archivo = Get-ChildItem -Path $ruta -Recurse -File -ErrorAction SilentlyContinue | Sort-Object Length -Descending | Select-Object -First 1
                 if ($archivo) {
-                    Write-Host "`nArchivo más grande encontrado:"
+                    Write-Host "`nArchivo mas grande encontrado:"
                     Write-Host "Ruta: $($archivo.FullName)"
                     Write-Host "Tamano: $([math]::Round($archivo.Length / 1MB, 2)) MB"
                 } else {
@@ -59,14 +69,21 @@ do {
         }
         "5" {
             Write-Host "`nConexiones de red activas (ESTABLISHED):"
-            $conexiones = (netstat -na | Select-String "ESTABLISHED").Count
-            Write-Host "Número de conexiones ESTABLISHED: $conexiones"
+            $conexiones = Get-NetTCPConnection -State Established
+            $total = $conexiones.Count
+            Write-Host "`nNúmero de conexiones de red activas (ESTABLISHED): $total`n"
+
+            if ($total -gt 0) {
+                $conexiones | Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, State |
+                    Format-Table -AutoSize
+            } else {
+                Write-Host "No hay conexiones en estado ESTABLISHED."
+            }
         }
         "0" {
-            
             Write-Host "Saliendo.... ( ^_^)~" -ForegroundColor cyan
         }
-        "cls"{
+        "cls" {
             Clear-Host
         }
         default {
